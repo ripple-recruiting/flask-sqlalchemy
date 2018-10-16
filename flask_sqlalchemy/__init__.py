@@ -20,6 +20,7 @@ from operator import itemgetter
 from threading import Lock
 
 import sqlalchemy
+from ddtrace import Pin, patch
 from flask import _app_ctx_stack, abort, current_app, request
 from flask.signals import Namespace
 from sqlalchemy import event, inspect, orm
@@ -560,7 +561,9 @@ class _EngineConnector(object):
             self._sa.apply_driver_hacks(self._app, info, options)
             if echo:
                 options['echo'] = echo
+            patch(sqlalchemy=True)
             self._engine = rv = sqlalchemy.create_engine(info, **options)
+            Pin.override(self._engine, service='recruiting-startup-db')
             if _record_queries(self._app):
                 _EngineDebuggingSignalEvents(self._engine,
                                              self._app.import_name).register()
